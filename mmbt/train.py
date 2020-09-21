@@ -18,14 +18,14 @@ from mmbt.utils.utils import set_seed, setup_testube_logger
 BASE_PATH = '../data'
 ML_PATH = '../ml_data'
 OUTPUT_PATH=BASE_PATH+'/mmbt/'
-RUN_ID="02_20200920"
+RUN_ID="01_20200920"
 
 def get_args():
     parser = ArgumentParser()
     #lightning
-    parser.add_argument('--gpus', default='2', type=str)
+    parser.add_argument('--gpus', default='0', type=str)
     parser.add_argument('--distributed_backend', default=None, type=str)
-    parser.add_argument('--precision', default=16, type=int)
+    parser.add_argument('--precision', default=32, type=int)
     parser.add_argument('--amp_level', default='02', type=str)
     parser.add_argument('--strategy', default='random_search', type=str)
     parser.add_argument('--monitor', default='macro_f1', type=str)
@@ -35,7 +35,7 @@ def get_args():
     parser.add_argument('--val_percent_check', default=1.0, type=float)
     parser.add_argument('--save_top_k', default=1, type=int, help='The best k models to be saved.')
     #mmbt
-    parser.add_argument("--batch_sz", type=int, default=4)
+    parser.add_argument("--batch_sz", type=int, default=2)
     parser.add_argument("--bert_model", type=str, default="bert-base-uncased", choices=["bert-base-uncased", "bert-large-uncased"])
     parser.add_argument("--data_path", type=str, default=BASE_PATH)
     parser.add_argument("--dataset_image_name", type=str, default="image", \

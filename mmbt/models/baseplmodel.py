@@ -97,9 +97,13 @@ class BasePLModel(pl.LightningModule):
         self.train_batch_times.append(time.time() - batch_start)
         return output
 
-    def training_epoch_end(self, output):
+    def training_epoch_end(self, outputs):
         print(f'bs: {self.args.batch_sz}, batches: {len(self.train_batch_times)}, average batch train time: {sum(self.train_batch_times) / len(self.train_batch_times)}')
         self.train_batch_times = []
+        train_losses = torch.stack([x["loss"] for x in outputs])
+        train_loss_mean = train_losses.mean()
+        tqdm_dict = {"train_loss_mean": train_loss_mean}
+        return OrderedDict({"train_loss_mean": train_loss_mean,  'log': tqdm_dict})
 
     def validation_step(self, batch, batch_idx, store_preds=False):
         batch_start = time.time()
