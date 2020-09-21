@@ -97,7 +97,7 @@ class BasePLModel(pl.LightningModule):
         self.train_batch_times.append(time.time() - batch_start)
         return output
 
-    def training_epoch_end(self):
+    def training_epoch_end(self, output):
         print(f'bs: {self.args.batch_sz}, batches: {len(self.train_batch_times)}, average batch train time: {sum(self.train_batch_times) / len(self.train_batch_times)}')
         self.train_batch_times = []
 
@@ -131,11 +131,12 @@ class BasePLModel(pl.LightningModule):
             preds = np.vstack(preds)
             metrics["macro_f1"] = f1_score(tgts, preds, average="macro")
             metrics["micro_f1"] = f1_score(tgts, preds, average="micro")
+            ret = OrderedDict({"val_loss": val_loss_mean, "macro_f1": metrics["macro_f1"], "micro_f1": metrics["micro_f1"], 'log': metrics})
         else:
             tgts = [l for sl in tgts for l in sl]
             preds = [l for sl in preds for l in sl]
             metrics["val_acc"] = accuracy_score(tgts, preds)
-        ret = OrderedDict({"val_loss": val_loss_mean, "val_acc": metrics["val_acc"], 'log': metrics})
+            ret = OrderedDict({"val_loss": val_loss_mean, "val_acc": metrics["val_acc"], 'log': metrics})
         print(f'Average val batch eval time: {sum(self.val_batch_times) / len(self.val_batch_times)}')
         self.val_batch_times = []
         return ret
