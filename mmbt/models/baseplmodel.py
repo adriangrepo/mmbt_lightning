@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from collections import OrderedDict
 from sklearn.metrics import f1_score, accuracy_score
 from torch.utils.data import DataLoader, RandomSampler
@@ -37,6 +38,8 @@ class BasePLModel(pl.LightningModule):
         self.args=args
         self.train_loader, self.val_loader, self.test_loader = get_data_loaders(args)
         self.__build_loss()
+        self.train_batch_times=[]
+        self.val_batch_times=[]
 
     def __build_loss(self):
         if self.args.task_type == "multilabel":
@@ -80,7 +83,7 @@ class BasePLModel(pl.LightningModule):
         return loss, out, tgt
 
     def training_step(self, batch, batch_idx):
-
+        batch_start = time.time()
         loss, out, tgt = self.run_fwd(batch)
 
         # in DP mode (default) make sure if result is scalar, there's another dim in the beginning
@@ -91,9 +94,15 @@ class BasePLModel(pl.LightningModule):
         output = OrderedDict(
             {"loss": loss, "out": out, "tgt":tgt, "progress_bar": tqdm_dict, "log": tqdm_dict}
         )
+        self.train_batch_times.append(time.time() - batch_start)
         return output
 
+    def training_epoch_end(self):
+        print(f'bs: {self.args.batch_sz}, batches: {len(self.train_batch_times)}, average batch train time: {sum(self.train_batch_times) / len(self.train_batch_times)}')
+        self.train_batch_times = []
+
     def validation_step(self, batch, batch_idx, store_preds=False):
+        batch_start = time.time()
         loss_val, out, tgt = self.run_fwd(batch)
         if self.args.task_type == "multilabel":
             pred = torch.sigmoid(out) > 0.5
@@ -107,6 +116,7 @@ class BasePLModel(pl.LightningModule):
 
         tqdm_dict = {"val_loss": loss_val}
         output = OrderedDict({"loss": loss_val, 'pred':pred, 'target': tgt, 'log': tqdm_dict})
+        self.val_batch_times.append(time.time() - batch_start)
         return output
 
     def validation_epoch_end(self, outputs, output_gates=False):
@@ -125,8 +135,9 @@ class BasePLModel(pl.LightningModule):
             tgts = [l for sl in tgts for l in sl]
             preds = [l for sl in preds for l in sl]
             metrics["val_acc"] = accuracy_score(tgts, preds)
-
         ret = OrderedDict({"val_loss": val_loss_mean, "val_acc": metrics["val_acc"], 'log': metrics})
+        print(f'Average val batch eval time: {sum(self.val_batch_times) / len(self.val_batch_times)}')
+        self.val_batch_times = []
         return ret
 
     def test_step(self, batch, batch_idx, args):
